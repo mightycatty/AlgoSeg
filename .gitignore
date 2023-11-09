@@ -6,3 +6,4 @@
 *.onnx
 *.pth
 *.png
+./.idea
