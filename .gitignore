@@ -1,0 +1,6 @@
+/project/cloth_parsing/test/
+./.idea
+*.pyc
+*.jpg
+*.pth
+*.onnx
