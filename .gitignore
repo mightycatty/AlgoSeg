@@ -4,3 +4,5 @@
 *.jpg
 *.pth
 *.onnx
+*.pth
+*.png
