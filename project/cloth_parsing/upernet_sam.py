@@ -24,21 +24,44 @@ resume = False
 tta_model = dict(type='SegTTAModel')
 
 # optimizer
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
-optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
-# learning policy
+# optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
+# optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer, clip_grad=None)
+# # learning policy
+# param_scheduler = [
+#     dict(
+#         type='PolyLR',
+#         eta_min=1e-4,
+#         power=0.9,
+#         begin=0,
+#         end=40000,
+#         by_epoch=False)
+# ]
+max_iters=400000
+optim_wrapper = dict(
+    type='AmpOptimWrapper',
+    optimizer=dict(
+        type='AdamW', lr=2e-3, betas=(0.9, 0.999), weight_decay=0.005),
+    # constructor='LayerDecayOptimizerConstructor',
+    # paramwise_cfg=dict(num_layers=24, layer_decay_rate=0.95),
+    accumulative_counts=4)
+
 param_scheduler = [
     dict(
+        type='LinearLR', start_factor=1e-6, by_epoch=False, begin=0, end=3000),
+    dict(
         type='PolyLR',
-        eta_min=1e-4,
-        power=0.9,
-        begin=0,
-        end=40000,
-        by_epoch=False)
+        power=1.0,
+        begin=3000,
+        end=max_iters,
+        eta_min=0.0,
+        by_epoch=False,
+    )
 ]
+
+
 # training schedule for 40k
 interval = 4000
-train_cfg = dict(type='IterBasedTrainLoop', max_iters=400000, val_interval=interval)
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=max_iters, val_interval=interval)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 
