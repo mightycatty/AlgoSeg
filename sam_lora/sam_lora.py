@@ -1,5 +1,6 @@
 # Sheng Wang at Apr 6 2023
 # What a time to be alive (first half of 2023)
+import logging
 
 from segment_anything import sam_model_registry
 
@@ -21,12 +22,12 @@ class _LoRA_qkv(nn.Module):
     """
 
     def __init__(
-        self,
-        qkv: nn.Module,
-        linear_a_q: nn.Module,
-        linear_b_q: nn.Module,
-        linear_a_v: nn.Module,
-        linear_b_v: nn.Module,
+            self,
+            qkv: nn.Module,
+            linear_a_q: nn.Module,
+            linear_b_q: nn.Module,
+            linear_a_v: nn.Module,
+            linear_b_v: nn.Module,
     ):
         super().__init__()
         self.qkv = qkv
@@ -42,8 +43,9 @@ class _LoRA_qkv(nn.Module):
         new_q = self.linear_b_q(self.linear_a_q(x))
         new_v = self.linear_b_v(self.linear_a_v(x))
         qkv[:, :, :, : self.dim] += new_q
-        qkv[:, :, :, -self.dim :] += new_v
+        qkv[:, :, :, -self.dim:] += new_v
         return qkv
+
 
 class LoRA_Sam(nn.Module):
     """Applies low-rank adaptation to a Sam model's image encoder.
@@ -55,10 +57,10 @@ class LoRA_Sam(nn.Module):
         lora_layer: which layer we apply LoRA.
 
     Examples::
-        >>> model = ViT('B_16_imagenet1k')
-        >>> lora_model = LoRA_ViT(model, r=4)
-        >>> preds = lora_model(img)
-        >>> print(preds.shape)
+        # >>> model = ViT('B_16_imagenet1k')
+        # >>> lora_model = LoRA_ViT(model, r=4)
+        # >>> preds = lora_model(img)
+        # >>> print(preds.shape)
         torch.Size([1, 1000])
     """
 
@@ -135,11 +137,11 @@ class LoRA_Sam(nn.Module):
         num_layer = len(self.w_As)  # actually, it is half
         a_tensors = {f"w_a_{i:03d}": self.w_As[i].weight for i in range(num_layer)}
         b_tensors = {f"w_b_{i:03d}": self.w_Bs[i].weight for i in range(num_layer)}
-        
+
         _in = self.lora_vit.head.in_features
         _out = self.lora_vit.head.out_features
         fc_tensors = {f"fc_{_in}in_{_out}out": self.lora_vit.head.weight}
-        
+
         merged_dict = {**a_tensors, **b_tensors, **fc_tensors}
         save_file(merged_dict, filename)
 
@@ -163,7 +165,7 @@ class LoRA_Sam(nn.Module):
                 saved_key = f"w_b_{i:03d}"
                 saved_tensor = f.get_tensor(saved_key)
                 w_B_linear.weight = Parameter(saved_tensor)
-                
+
             _in = self.lora_vit.head.in_features
             _out = self.lora_vit.head.out_features
             saved_key = f"fc_{_in}in_{_out}out"
@@ -179,11 +181,40 @@ class LoRA_Sam(nn.Module):
         for w_B in self.w_Bs:
             nn.init.zeros_(w_B.weight)
 
-    # def forward(self, x: Tensor) -> Tensor:
-    #     return self.lora_vit(x)
+
+class SAMImageEncoderASBackbone(nn.Module):
+    def __init__(self, model_type='vit_b', pretrained=None, lora_rank=4, out_indices=(0, 1, 2, 4)):
+        """
+        output_indices:
+        """
+        super(SAMImageEncoderASBackbone, self).__init__()
+
+        self._sam = sam_model_registry[model_type](checkpoint=None)
+        # pretrained = r'/home/justsomeone/Downloads/sam_vit_b_01ec64.pth'
+        # if pretrained is not None:
+        # logging.error(f'loading sam pretrain weights{pretrained}')
+        if pretrained is not None:
+            print(f'loading sam pretrain weights{pretrained}')
+            with open(pretrained, "rb") as f:
+                state_dict = torch.load(f)
+        self._sam.load_state_dict(state_dict)
+        del self._sam.mask_decoder
+        del self._sam.prompt_encoder
+        self._out_indices = out_indices
+        self.lora_sam = LoRA_Sam(self._sam, lora_rank)
+        self._pretrained = pretrained
+
+    def forward(self, x):  # should return a tuple
+        x, intermedia_features = self.lora_sam.sam.image_encoder(x)
+        intermedia_features.append(x)
+        outputs = [intermedia_features[item] for item in self._out_indices]
+        return tuple(outputs)
+
+    def init_weights(self, pretrained=None):
+        return
 
 
 if __name__ == "__main__":
-    sam = sam_model_registry["vit_b"](checkpoint="sam_vit_b_01ec64.pth")
-    lora_sam = LoRA_Sam(sam,4)
-    lora_sam.sam.image_encoder(torch.rand(size=(1,3,1024,1024)))
+    lora_sam = SAMImageEncoderASBackbone()
+    result = lora_sam(torch.rand(size=(1, 3, 1024, 1024)))
+    a = 1

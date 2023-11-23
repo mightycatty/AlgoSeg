@@ -1,6 +1,6 @@
 # model settings
 _base_ = [
-    'dataset.py',
+    'dataset_sam.py',
 ]
 num_classes = 26
 
@@ -10,7 +10,10 @@ env_cfg = dict(
     mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0),
     dist_cfg=dict(backend='nccl'),
 )
-vis_backends = [dict(type='LocalVisBackend')]
+vis_backends=[dict(type='LocalVisBackend'),
+              # dict(type='TensorboardVisBackend'),
+              dict(type='WandbVisBackend')]
+# TensorboardVisBackend
 visualizer = dict(
     type='SegLocalVisualizer', vis_backends=vis_backends, name='visualizer')
 log_processor = dict(by_epoch=False)
@@ -37,22 +40,24 @@ interval = 4000
 train_cfg = dict(type='IterBasedTrainLoop', max_iters=400000, val_interval=interval)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
+
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=interval),
     sampler_seed=dict(type='DistSamplerSeedHook'),
-    visualization=dict(type='SegVisualizationHook'))
+    visualization=dict(type='SegVisualizationHook'),
+)
 
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    mean=[123.675, 116.28, 103.53],
-    std=[58.395, 57.12, 57.375],
+    mean=[0., 0., 0.],
+    std=[1., 1., 1.],
     bgr_to_rgb=True,
     pad_val=0,
-    size=(512,512),
+    size=(1024, 1024),
     # size_divisor=32,
     seg_pad_val=255)
 model = dict(
@@ -61,11 +66,12 @@ model = dict(
     # pretrained='open-mmlab://resnet50_v1c',
     backbone=dict(
         type='SAMBackbone',
+        pretrained=r'/home/justsomeone/Downloads/sam_vit_b_01ec64.pth',
         ),
     neck=dict(type='Feature2Pyramid', embed_dim=768, rescales=[4, 2, 1, 0.5]),
     decode_head=dict(
         type='UPerHead',
-        in_channels=[768, 768, 768, 768],
+        in_channels=[768, 768, 768, 256],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
@@ -75,19 +81,19 @@ model = dict(
         align_corners=False,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-    auxiliary_head=dict(
-        type='FCNHead',
-        in_channels=1024,
-        in_index=2,
-        channels=256,
-        num_convs=1,
-        concat_input=False,
-        dropout_ratio=0.1,
-        num_classes=num_classes,
-        norm_cfg=norm_cfg,
-        align_corners=False,
-        loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)),
+    # auxiliary_head=dict(
+    #     type='FCNHead',
+    #     in_channels=768,
+    #     in_index=2,
+    #     channels=256,
+    #     num_convs=1,
+    #     concat_input=False,
+    #     dropout_ratio=0.1,
+    #     num_classes=num_classes,
+    #     norm_cfg=norm_cfg,
+    #     align_corners=False,
+    #     loss_decode=dict(
+    #         type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

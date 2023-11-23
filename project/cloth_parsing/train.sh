@@ -1,1 +1,1 @@
-python ../../mmsegmentation/tools/train.py upernet_r50.py --amp --work-dir ./test
+python ../../mmsegmentation/tools/train.py upernet_sam.py --amp --work-dir ./sam_train

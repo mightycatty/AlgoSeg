@@ -15,6 +15,9 @@ print(result.shape)
 ## Train
 Coming soon and welcome pull request.
 
+
+## download weights
+https://github.com/facebookresearch/segment-anything#model-checkpoints
 ## Thanks
 The code for LoRA ViT comes form
 https://github.com/JamesQFreeman/LoRA-ViT

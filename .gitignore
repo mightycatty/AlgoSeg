@@ -7,3 +7,6 @@
 *.pth
 *.png
 ./.idea
+*/wandb/*
+/project/cloth_parsing/sam_train/
+/seg.egg-info/
