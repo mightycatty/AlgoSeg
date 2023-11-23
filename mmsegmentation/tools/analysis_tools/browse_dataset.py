@@ -53,7 +53,7 @@ def main():
     progress_bar = ProgressBar(len(dataset))
     for item in dataset:
         img = item['inputs'].permute(1, 2, 0).numpy()
-        img = img[..., [2, 1, 0]]  # bgr to rgb
+        img = img[..., [2, 1, 0]].copy() # bgr to rgb
         data_sample = item['data_samples'].numpy()
         img_path = osp.basename(item['data_samples'].img_path)
 

@@ -21,10 +21,12 @@ train_pipeline = [
     dict(type='LoadAnnotations', reduce_zero_label=IGNORE_ZERO_LABEL),
     dict(
         type='RandomResize',
-        scale=(2048, 1024),
-        ratio_range=(0.5, 2.0),
+        scale=(1024, 1024),
+        ratio_range=(0.5, 1.2),
         keep_ratio=True),
+    # dict(type='Resize', scale=crop_size[0], keep_ratio=True),
     dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
+    dict(type='Pad', size=crop_size, pad_val=255),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
     dict(type='PackSegInputs')
@@ -34,6 +36,7 @@ test_pipeline = [
     dict(type='Resize', scale=(2048, 1024), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
+    # dict(type='Pad', size=crop_size),
     dict(type='LoadAnnotations', reduce_zero_label=IGNORE_ZERO_LABEL),
     dict(type='PackSegInputs')
 ]

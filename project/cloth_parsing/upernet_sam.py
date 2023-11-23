@@ -3,6 +3,7 @@ _base_ = [
     'dataset_sam.py',
 ]
 num_classes = 26
+fp16 = dict(loss_scale='dynamic')
 
 default_scope = 'mmseg'
 env_cfg = dict(
@@ -53,10 +54,10 @@ default_hooks = dict(
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    mean=[0., 0., 0.],
-    std=[1., 1., 1.],
+    mean=[123.675, 116.28, 103.53],
+    std=[58.395, 57.12, 57.375],
     bgr_to_rgb=True,
-    pad_val=0,
+    pad_val=255,
     size=(1024, 1024),
     # size_divisor=32,
     seg_pad_val=255)
